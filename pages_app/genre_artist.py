@@ -36,9 +36,19 @@ def insight_box(title, text):
 def show_genre_artist(filtered_df, full_df):
     df = filtered_df.copy()
 
-    for col in ["playlist_genre", "playlist_subgenre", "popularity_level", "track_artist"]:
+    # Fix categorical dtype issue on Streamlit Cloud / Plotly sunburst
+    categorical_cols = [
+        "playlist_genre",
+        "playlist_subgenre",
+        "popularity_level",
+        "track_artist"
+    ]
+
+    for col in categorical_cols:
         if col in df.columns:
-            df[col] = df[col].astype(str)
+            df[col] = df[col].astype("object").astype(str)
+        
+
 
     st.markdown(
         """
@@ -146,13 +156,15 @@ def show_genre_artist(filtered_df, full_df):
             ["playlist_genre", "playlist_subgenre", "popularity_level", "track_name"]
         ].copy()
 
-        sunburst_df["playlist_genre"] = sunburst_df["playlist_genre"].astype(str)
-        sunburst_df["playlist_subgenre"] = sunburst_df["playlist_subgenre"].astype(str)
-        sunburst_df["popularity_level"] = sunburst_df["popularity_level"].astype(str)
+        for col in ["playlist_genre", "playlist_subgenre", "popularity_level"]:
+            sunburst_df[col] = sunburst_df[col].astype("object").astype(str)
 
         sunburst_df = (
             sunburst_df
-            .groupby(["playlist_genre", "playlist_subgenre", "popularity_level"], observed=True)
+            .groupby(
+                ["playlist_genre", "playlist_subgenre", "popularity_level"],
+                observed=True
+            )
             .agg(count=("track_name", "count"))
             .reset_index()
         )
@@ -178,15 +190,11 @@ def show_genre_artist(filtered_df, full_df):
             margin=dict(l=10, r=10, t=20, b=10)
         )
 
-        st.plotly_chart(fig, use_container_width=True, key="genre_sunburst_chart")
-
-        fig.update_layout(
-            height=620,
-            paper_bgcolor="rgba(0,0,0,0)",
-            margin=dict(l=10, r=10, t=20, b=10)
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            key="genre_sunburst_chart"
         )
-
-        st.plotly_chart(fig, use_container_width=True, key="genre_stacked_bar_chart")
 
     # =========================
     # 100% Stacked Bar
