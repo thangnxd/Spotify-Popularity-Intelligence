@@ -36,6 +36,10 @@ def insight_box(title, text):
 def show_genre_artist(filtered_df, full_df):
     df = filtered_df.copy()
 
+    for col in ["playlist_genre", "playlist_subgenre", "popularity_level", "track_artist"]:
+        if col in df.columns:
+            df[col] = df[col].astype(str)
+
     st.markdown(
         """
         <div class="page-header">
@@ -133,16 +137,27 @@ def show_genre_artist(filtered_df, full_df):
             margin=dict(l=10, r=10, t=20, b=10)
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="genre_treemap_chart")
 
     with right:
         section_title("Sunburst: Genre → Subgenre → Popularity")
 
+        sunburst_df = df[
+            ["playlist_genre", "playlist_subgenre", "popularity_level", "track_name"]
+        ].copy()
+
+        sunburst_df["playlist_genre"] = sunburst_df["playlist_genre"].astype(str)
+        sunburst_df["playlist_subgenre"] = sunburst_df["playlist_subgenre"].astype(str)
+        sunburst_df["popularity_level"] = sunburst_df["popularity_level"].astype(str)
+
         sunburst_df = (
-            df.groupby(["playlist_genre", "playlist_subgenre", "popularity_level"])
-            .size()
-            .reset_index(name="count")
+            sunburst_df
+            .groupby(["playlist_genre", "playlist_subgenre", "popularity_level"], observed=True)
+            .agg(count=("track_name", "count"))
+            .reset_index()
         )
+
+        sunburst_df = sunburst_df[sunburst_df["count"] > 0]
 
         fig = px.sunburst(
             sunburst_df,
@@ -163,7 +178,15 @@ def show_genre_artist(filtered_df, full_df):
             margin=dict(l=10, r=10, t=20, b=10)
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="genre_sunburst_chart")
+
+        fig.update_layout(
+            height=620,
+            paper_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=10, r=10, t=20, b=10)
+        )
+
+        st.plotly_chart(fig, use_container_width=True, key="genre_stacked_bar_chart")
 
     # =========================
     # 100% Stacked Bar
@@ -171,7 +194,7 @@ def show_genre_artist(filtered_df, full_df):
     section_title("Popularity Composition by Genre")
 
     comp = (
-        df.groupby(["playlist_genre", "popularity_level"])
+        df.groupby(["playlist_genre", "popularity_level"], observed=True)
         .size()
         .reset_index(name="count")
     )
@@ -206,7 +229,7 @@ def show_genre_artist(filtered_df, full_df):
 
     fig.update_xaxes(tickangle=-35)
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="1")
 
     # =========================
     # Heatmap Genre × Feature
@@ -246,7 +269,7 @@ def show_genre_artist(filtered_df, full_df):
         yaxis_title="Genre"
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="genre_audio_heatmap_chart")
 
     # =========================
     # Artist Section
@@ -295,7 +318,7 @@ def show_genre_artist(filtered_df, full_df):
             coloraxis_showscale=False
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="top_artists_ranking_chart")
 
         st.dataframe(
             artist_df,
